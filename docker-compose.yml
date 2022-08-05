@@ -1,0 +1,9 @@
+version: "3.7"
+
+services:
+
+  modbus:
+    build: ./
+    image: master
+    volumes:
+      - "./:/modbus"
