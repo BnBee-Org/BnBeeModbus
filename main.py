@@ -5,7 +5,9 @@ import requests
 
 CREATE_NEW_DB = False
 USB_PORT = "/dev/ttyUSB0"
-BACKEND_URL = 'http://host.docker.internal:8000/'
+# BACKEND_URL = 'http://host.docker.internal:8000/'
+# For Prod:
+BACKEND_URL = 'http://localhost:8000/'
 
 TEMPERATURE_INT_REGISTER = 1
 TEMPERATURE_DECIMAL_REGISTER = 2
@@ -25,7 +27,7 @@ if __name__ == '__main__':
             decimal_number = 0
             try:
 
-                instrument = minimalmodbus.Instrument(USB_PORT, 1)
+                instrument = minimalmodbus.Instrument(USB_PORT, hive["id"])
                 instrument.serial.baudrate = 9600
                 instrument.serial.timeout = 0.2
                 print('Hive.id: ', hive["id"])
