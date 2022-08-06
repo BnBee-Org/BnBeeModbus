@@ -1,7 +1,9 @@
+import datetime
 import time
 import minimalmodbus
 import serial
 import requests
+from pytz import timezone
 
 CREATE_NEW_DB = False
 USB_PORT = "/dev/ttyUSB0"
@@ -48,6 +50,7 @@ if __name__ == '__main__':
                 temperature = temperature_int + temperature_decimal / 100
                 weight = weight_int + weight_decimal / 100
 
+                print(datetime.datetime.now(tz=timezone('Europe/Kiev')))
                 print('Temp:', temperature)
                 print('Weight:', weight)
                 print('Hum:', humidity)
