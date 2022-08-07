@@ -18,13 +18,20 @@ WEIGHT_DECIMAL_REGISTER = 4
 HUMIDITY_REGISTER = 5
 
 if __name__ == '__main__':
+    hives = None
 
-    data = requests.get(BACKEND_URL + 'hives')
-    hives = data.json()
+    while not hives:
+        try:
+            data = requests.get(BACKEND_URL + 'hives')
+            hives = data.json()
+        except requests.exceptions.ConnectionError as exception:
+            print(exception)
+            time.sleep(60)
 
     while True:
-        statistics = []
+
         for hive in hives:
+
             # number of decimals for storage
             decimal_number = 0
             try:
@@ -67,7 +74,9 @@ if __name__ == '__main__':
                 }
                 x = requests.post(BACKEND_URL + 'statistic', params=json_data)
 
-            except (serial.SerialException, minimalmodbus.NoResponseError) as exception:
+            except (serial.SerialException,
+                    minimalmodbus.NoResponseError,
+                    requests.exceptions.ConnectionError) as exception:
                 print(exception)
 
         time.sleep(900)
