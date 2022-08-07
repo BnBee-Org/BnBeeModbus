@@ -7,7 +7,7 @@ from pytz import timezone
 
 CREATE_NEW_DB = False
 USB_PORT = "/dev/ttyUSB0"
-#BACKEND_URL = 'http://host.docker.internal:8000/'
+# BACKEND_URL = 'http://host.docker.internal:8000/'
 # For Prod:
 BACKEND_URL = 'http://localhost:8000/'
 
@@ -29,9 +29,9 @@ if __name__ == '__main__':
             time.sleep(60)
 
     while True:
-        print(hives)
-        print("Loop is working")
+
         for hive in hives:
+
             # number of decimals for storage
             decimal_number = 0
             try:
