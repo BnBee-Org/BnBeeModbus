@@ -18,13 +18,14 @@ RETRIEVES_COUNTER = 2
 STATISTICS_TIMEOUT = 900
 
 # For Dev:
-USB_PORT = "COM3"
-BACKEND_URL = 'http://host.docker.internal:8000/'
+# USB_PORT = "COM3"
+# BACKEND_URL = 'http://host.docker.internal:8000/'
 
 
 # For Prod:
-# BACKEND_URL = 'http://localhost:8000/'
-# USB_PORT = "/dev/ttyUSB1"
+BACKEND_URL = 'http://localhost:8000/'
+USB_PORT = "/dev/ttyUSB0"
+
 
 def read_till_timeout(serial_connection, term):
     matcher = re.compile(term)
