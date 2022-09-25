@@ -68,7 +68,7 @@ if __name__ == '__main__':
                     counter += 1
                     print("\nWaiting for: ", str(hive["id"]))
                     request = 'D;0' + str(hive["id"]) + ';'
-                    time.sleep(0.05)
+                    time.sleep(0.1)
                     print("Command sent: ", request)
                     ser.write(str.encode(request))
                     response_string = read_till_timeout(ser, term='\n').decode('utf-8').strip()
