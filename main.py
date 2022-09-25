@@ -1,21 +1,39 @@
-import datetime
+# ---------------------------
+#       Script 2.0
+#       Ostap Kuch
+#       25.09.2022
+# ---------------------------
+
 import time
-import minimalmodbus
 import serial
 import requests
 from pytz import timezone
+from datetime import datetime
+import re
 
 CREATE_NEW_DB = False
-USB_PORT = "/dev/ttyUSB0"
-# BACKEND_URL = 'http://host.docker.internal:8000/'
-# For Prod:
-BACKEND_URL = 'http://localhost:8000/'
+SERIAL_TIMEOUT = 1.5
+BAUD_RATE = 19200
+RETRIEVES_COUNTER = 2
+STATISTICS_TIMEOUT = 900
 
-TEMPERATURE_INT_REGISTER = 1
-TEMPERATURE_DECIMAL_REGISTER = 2
-WEIGHT_INT_REGISTER = 3
-WEIGHT_DECIMAL_REGISTER = 4
-HUMIDITY_REGISTER = 5
+# For Dev:
+USB_PORT = "COM3"
+BACKEND_URL = 'http://host.docker.internal:8000/'
+
+
+# For Prod:
+# BACKEND_URL = 'http://localhost:8000/'
+# USB_PORT = "/dev/ttyUSB1"
+
+def read_till_timeout(serial_connection, term):
+    matcher = re.compile(term)
+    tic = time.time()
+    buff = serial_connection.read(128)
+    while ((time.time() - tic) < SERIAL_TIMEOUT) and (not matcher.search(buff)):
+        buff += serial_connection.read(128)
+    return buff
+
 
 if __name__ == '__main__':
     hives = None
@@ -29,54 +47,64 @@ if __name__ == '__main__':
             time.sleep(60)
 
     while True:
+        print('\nBegin, timeout: ', STATISTICS_TIMEOUT / 60, 'min')
+        print('Time Kyiv:', datetime.now(tz=timezone('Europe/Kiev')).strftime("%Y-%m-%d %H:%M:%S"))
 
         for hive in hives:
 
-            # number of decimals for storage
-            decimal_number = 0
+            humidity = 0
+            temperature = 0
+            weight = 0
+
             try:
 
-                instrument = minimalmodbus.Instrument(USB_PORT, hive["id"])
-                instrument.serial.baudrate = 9600
-                instrument.serial.timeout = 0.2
-                print('Hive.id: ', hive["id"])
+                ser = serial.Serial(USB_PORT, BAUD_RATE, timeout=SERIAL_TIMEOUT)
+                ser.reset_input_buffer()
+                ser.reset_output_buffer()
+                counter = 0
 
-                # Write data if needed
-                # instrument.write_register(1, 1, 0)
+                while True:
+                    counter += 1
+                    print("\nWaiting for: ", str(hive["id"]))
+                    request = 'D;0' + str(hive["id"]) + ';'
+                    time.sleep(0.05)
+                    print("Command sent: ", request)
+                    ser.write(str.encode(request))
+                    response_string = read_till_timeout(ser, term='\n').decode('utf-8').strip()
 
-                # Read values
-                print(instrument)
-                print("-------------Test run--------------")
+                    if len(response_string) > 5:
+                        print("Response: ", response_string)
+                        response = response_string.split(';')
+                        for data in response:
+                            if data[0] == "H":
+                                humidity = data[2:]
+                            if data[0] == "T":
+                                temperature = data[2:]
+                            if data[0] == "W":
+                                weight = data[2:]
 
-                temperature_int = instrument.read_register(TEMPERATURE_INT_REGISTER, decimal_number)
-                temperature_decimal = instrument.read_register(TEMPERATURE_DECIMAL_REGISTER, decimal_number)
-                weight_int = instrument.read_register(WEIGHT_INT_REGISTER, decimal_number)
-                weight_decimal = instrument.read_register(WEIGHT_DECIMAL_REGISTER, decimal_number)
-                humidity = instrument.read_register(HUMIDITY_REGISTER, decimal_number)
+                        print('Temp:', temperature)
+                        print('Weight:', weight)
+                        print('Hum:', humidity)
 
-                temperature = temperature_int + temperature_decimal / 100
-                weight = weight_int + weight_decimal / 100
-
-                print(datetime.datetime.now(tz=timezone('Europe/Kiev')))
-                print('Temp:', temperature)
-                print('Weight:', weight)
-                print('Hum:', humidity)
-
-                instrument.serial.close()
-
-                json_data = {
-                    "hive_id": hive["id"],
-                    "temperature": temperature,
-                    "humidity": humidity,
-                    "weight": weight,
-                    "avr_sound": 0,
-                    "pressure": 0
-                }
-                x = requests.post(BACKEND_URL + 'statistic', params=json_data)
+                        json_data = {
+                            "hive_id": hive["id"],
+                            "temperature": temperature,
+                            "humidity": humidity,
+                            "weight": weight,
+                            "avr_sound": 0,
+                            "pressure": 0
+                        }
+                        x = requests.post(BACKEND_URL + 'statistic', params=json_data)
+                        break
+                    else:
+                        print("No response from hive with id: ", hive["id"])
+                        if counter >= RETRIEVES_COUNTER:
+                            break
+                ser.close()
 
             except (serial.SerialException,
-                    minimalmodbus.NoResponseError,
                     requests.exceptions.ConnectionError) as exception:
                 print(exception)
 
-        time.sleep(900)
+        time.sleep(STATISTICS_TIMEOUT)
